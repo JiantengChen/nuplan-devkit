@@ -155,7 +155,17 @@ def cache_data(cfg: DictConfig, worker: WorkerPool) -> None:
     data_points = [{"scenario": scenario, "cfg": cfg} for scenario in scenarios]
     logger.info("Starting dataset caching of %s files...", str(len(data_points)))
 
-    cache_results = worker_map(worker, cache_scenarios, data_points)
+    import sys
+    is_debug = True if sys.gettrace() else False
+    if is_debug:
+        logger.info("Launching in debug mode, caching scenarios sequentially...")
+        cache_results = []
+        for data_point in data_points:
+            result = cache_scenarios([data_point])  # Pass a single data point as a list
+            cache_results.extend(result)
+    else:
+        logger.info("Not in debug mode, caching scenarios in parallel...")
+        cache_results = worker_map(worker, cache_scenarios, data_points)
 
     num_success = sum(result.successes for result in cache_results)
     num_fail = sum(result.failures for result in cache_results)
