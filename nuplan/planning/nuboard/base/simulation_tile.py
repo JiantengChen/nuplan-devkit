@@ -18,7 +18,8 @@ import numpy as np
 from bokeh.document import without_document_lock
 from bokeh.document.document import Document
 from bokeh.events import PointEvent
-from bokeh.io.export import get_screenshot_as_png
+from bokeh.io.export import get_screenshot_as_png, export_png
+from PIL import Image
 from bokeh.layouts import column, gridplot, row
 from bokeh.models import Button, ColumnDataSource, Slider, Title
 from bokeh.plotting.figure import Figure
@@ -438,11 +439,11 @@ class SimulationTile:
 
         try:
             if len(selected_simulation_figure.ego_state_plot.data_sources):
-                chrome_options = webdriver.ChromeOptions()
-                chrome_options.headless = True
-                driver = webdriver.Chrome(chrome_options=chrome_options)
-                driver.set_window_size(1920, 1080)
-                shape = None
+                # chrome_options = webdriver.ChromeOptions()
+                # chrome_options.headless = True
+                # driver = webdriver.Chrome(options=chrome_options)
+                # driver.set_window_size(1920, 1080)
+                # shape = None
                 simulation_figure = self._create_initial_figure(
                     figure_index=figure_index,
                     backend="canvas",
@@ -452,15 +453,25 @@ class SimulationTile:
                 simulation_figure.copy_datasources(selected_simulation_figure)
                 self._render_scenario(main_figure=simulation_figure)
                 length = len(selected_simulation_figure.ego_state_plot.data_sources)
+                # Render each frame
                 for frame_index in tqdm(range(length), desc="Rendering video"):
                     self._render_plots(main_figure=simulation_figure, frame_index=frame_index)
-                    image = get_screenshot_as_png(column(simulation_figure.figure), driver=driver)
+                    image = get_screenshot_as_png(column(simulation_figure.figure), driver=None)
+                    images.append(np.array(image))
                     shape = image.size
-                    images.append(image)
                     label = f"Rendering video now... ({frame_index}/{length})"
                     self._doc.add_next_tick_callback(
                         partial(self._update_video_button_label, figure_index=figure_index, label=label)
                     )
+                # for frame_index in tqdm(range(length), desc="Rendering video"):
+                #     self._render_plots(main_figure=simulation_figure, frame_index=frame_index)
+                #     image = get_screenshot_as_png(column(simulation_figure.figure), driver=driver)
+                #     shape = image.size
+                #     images.append(image)
+                #     label = f"Rendering video now... ({frame_index}/{length})"
+                #     self._doc.add_next_tick_callback(
+                #         partial(self._update_video_button_label, figure_index=figure_index, label=label)
+                #     )
 
                 fourcc = cv2.VideoWriter_fourcc("M", "J", "P", "G")
                 if database_interval:
